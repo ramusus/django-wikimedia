@@ -45,6 +45,10 @@ class WikipediaManager(models.Manager):
         if not created:
             element.content = content
             element.save()
+
+        # delete all other wikipedia elements for this object
+        self.filter(object_id=object.id, content_type=ContentType.objects.get_for_model(object)).exclude(id=element.id).delete()
+
         return element
 
     def _get_content(self, lang, title):
@@ -210,7 +214,9 @@ class WikipediaElement(models.Model):
         for titles in self.remove.block_titles:
             for title in self.content.findAll(text=re.compile(u'(%s)' % u'|'.join(titles))):
                 # get h2
-                title = title.parent.parent
+                title = title.findParent('h2')
+                if not title:
+                    continue
                 next = title.nextSibling
                 title.extract()
                 while next and (isinstance(next, NavigableString) or next.name != 'h2'):

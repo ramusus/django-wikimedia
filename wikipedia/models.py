@@ -98,6 +98,8 @@ class WikipediaElement(models.Model):
         class_attribute = True
         script = True
 
+        external_links_titles = (u'Ссылки','links')
+
     lang = models.CharField(_('Language'), max_length=2, choices=LANGUAGES)
     title = models.CharField(_('Title'), max_length=300)
     content = models.TextField(_('Content'))
@@ -164,7 +166,7 @@ class WikipediaElement(models.Model):
 
         # external links block (ru,en)
         if self.remove.external_links:
-            self.remove.block_titles += [(u'Ссылки','links')]
+            self.remove.block_titles += [self.remove.external_links_titles]
 
         if self.remove.reference_links:
             [el.extract() for el in self.content.findAll('sup', {'class': 'reference'})]
@@ -212,14 +214,21 @@ class WikipediaElement(models.Model):
         Remove h2 title and all next tags siblings until next h2 title
         '''
         for titles in self.remove.block_titles:
-            for title in self.content.findAll(text=re.compile(u'(%s)' % u'|'.join(titles))):
-                # get h2
-                title = title.findParent('h2')
-                if not title:
-                    continue
-                next = title.nextSibling
-                title.extract()
-                while next and (isinstance(next, NavigableString) or next.name != 'h2'):
-                    next_ = next
-                    next = next.nextSibling
-                    next_.extract()
+            [el.extract() for el in self.find_block_contents(titles)]
+
+    def find_block_contents(self, titles):
+        '''
+        Find and return all block items with h2 title and all next tags siblings until next h2 title
+        '''
+        items = []
+        for title in self.content.findAll(text=re.compile(u'(%s)' % u'|'.join(titles))):
+            # get h2
+            title = title.findParent('h2')
+            if not title:
+                continue
+            next = title.nextSibling
+            items += [title]
+            while next and (isinstance(next, NavigableString) or next.name != 'h2'):
+                items += [next]
+                next = next.nextSibling
+        return items

@@ -47,7 +47,7 @@ class WikipediaManager(models.Manager):
             element.save()
 
         # delete all other wikipedia elements for this object
-        self.filter(object_id=object.id, content_type=ContentType.objects.get_for_model(object)).exclude(id=element.id).delete()
+        self.filter(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang).exclude(id=element.id).delete()
 
         return element
 
@@ -174,7 +174,7 @@ class WikipediaElement(models.Model):
         if self.remove.reference:
             # references block (en) div class="reflist references-column-count references-column-count-2"
             div_classes += ['reflist','references-small']
-            self.remove.block_titles += [(u'Примечания','References'),('Bibliography')]
+            self.remove.block_titles += [(u'Примечания','References')]
 
         if self.remove.infobox:
             table_classes += ['infobox'] # table infobox

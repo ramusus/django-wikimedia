@@ -54,3 +54,7 @@ class WikipediaTestCase(TestCase):
         ru = WikipediaElement.objects.update(object, 'ru', u'Аватар_(фильм,_2009)')
 
         self.assertTrue(ru.content.find(u'Не следует путать') == -1)
+
+        ru = WikipediaElement.objects.update(object, 'ru', u'Список_Шиндлера')
+
+        self.assertTrue(ru.content.find(u'Это статья о фильме. О соответствующих реальных событиях см. статью') == -1)

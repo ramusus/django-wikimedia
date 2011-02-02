@@ -97,7 +97,6 @@ class WikipediaElement(models.Model):
         infobox = True
         sisterproject = True
         navbox = True
-        disambiguation = True
         reference = True
         reference_links = True
         see_also = True
@@ -140,7 +139,7 @@ class WikipediaElement(models.Model):
         self.parse_content()
         self.remove_garbage()
 
-        self.content = unicode(self.content)
+        self.content = unicode(self.content).strip()
 
     def parse_content(self):
         '''
@@ -187,8 +186,10 @@ class WikipediaElement(models.Model):
             self.remove.block_titles += [(u'Примечания','References')]
 
         if self.remove.infobox:
-            table_classes += ['infobox'] # table infobox
-            div_classes += ['infobox'] # div infobox
+            infobox = self.content.find(True, {'class': re.compile('infobox')})
+            if infobox:
+                [el.extract() for el in infobox.findAllPrevious(True)]
+                infobox.extract()
 
         if self.remove.sisterproject:
             # links to another wikimedia (en) table class="metadata mbox-small plainlinks"
@@ -199,14 +200,6 @@ class WikipediaElement(models.Model):
         if self.remove.navbox:
             # links to another movies of director table class="navbox collapsible autocollapse nowraplinks"
             table_classes += ['navbox','NavFrame']
-
-        if self.remove.disambiguation:
-            # disambiguation div class="dablink" (en)
-            div_classes += ['dablink']
-            # dl - at first place (ru)
-#            duble_text = self.content.find(text=u'Не следует путать') doesn't work
-            if self.content.contents[0].name == 'dl':
-                self.content.contents[0].extract()
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]

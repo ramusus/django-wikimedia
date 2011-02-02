@@ -208,6 +208,10 @@ class WikipediaElement(models.Model):
             if self.content.contents[0].name == 'dl':
                 self.content.contents[0].extract()
 
+        # lock icon (en) <div class="metadata topicon" id="protected-icon">
+        [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]
+        div_classes += ['metadata']
+
         [el.extract() for el in self.content.findAll('table', {'class': re.compile('(%s)' % '|'.join(table_classes))})]
         [el.extract() for el in self.content.findAll('div', {'class': re.compile('(%s)' % '|'.join(div_classes))})]
         self.remove_blocks()

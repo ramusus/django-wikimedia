@@ -13,6 +13,9 @@ LANGUAGES = getattr(settings, 'WIKIPEDIA_LANGUAGES', [('en', _('English'))])
 
 wikipedia_updated = Signal(providing_args=['instance','created'])
 
+class WikipediaTitleError(ValueError):
+    pass
+
 class WikipediaManager(models.Manager):
     '''
     Wikipedia manager
@@ -37,7 +40,10 @@ class WikipediaManager(models.Manager):
         if lang not in [l[0] for l in LANGUAGES]:
             raise ValueError('Attribute lang not in allowed settings.WIKIPEDIA_LANGUAGES')
 
-        content = self._get_content(lang, title)
+        try:
+            content = self._get_content(lang, title)
+        except urllib2.HTTPError:
+            raise WikipediaTitleError('Attribute title point to incorrect wikipedia title')
 
         element, created = self.get_or_create(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang, title=title, defaults={
             'content': content,
@@ -191,8 +197,12 @@ class WikipediaElement(models.Model):
             table_classes += ['navbox','NavFrame']
 
         if self.remove.disambiguation:
-            # disambiguation div class="dablink"
+            # disambiguation div class="dablink" (en)
             div_classes += ['dablink']
+            # dl - at first place (ru)
+#            duble_text = self.content.find(text=u'Не следует путать') doesn't work
+            if self.content.contents[0].name == 'dl':
+                self.content.contents[0].extract()
 
         [el.extract() for el in self.content.findAll('table', {'class': re.compile('(%s)' % '|'.join(table_classes))})]
         [el.extract() for el in self.content.findAll('div', {'class': re.compile('(%s)' % '|'.join(div_classes))})]

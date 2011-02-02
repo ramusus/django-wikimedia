@@ -50,3 +50,7 @@ class WikipediaTestCase(TestCase):
         self.assertTrue(ru.content.find(u'bgcolor="') == -1)
         self.assertTrue(ru.content.find(u'class="') == -1)
         self.assertTrue(ru.content.find(u'<script') == -1)
+
+        ru = WikipediaElement.objects.update(object, 'ru', u'Аватар_(фильм,_2009)')
+
+        self.assertTrue(ru.content.find(u'Не следует путать') == -1)

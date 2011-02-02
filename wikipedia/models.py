@@ -100,6 +100,7 @@ class WikipediaElement(models.Model):
         disambiguation = True
         reference = True
         reference_links = True
+        see_also = True
         style_attribute = True
         class_attribute = True
         script = True
@@ -173,6 +174,9 @@ class WikipediaElement(models.Model):
         # external links block (ru,en)
         if self.remove.external_links:
             self.remove.block_titles += [self.remove.external_links_titles]
+
+        if self.remove.see_also:
+            self.remove.block_titles += [('See also', u'Cмотрите также', u'Cмотри также')]
 
         if self.remove.reference_links:
             [el.extract() for el in self.content.findAll('sup', {'class': 'reference'})]

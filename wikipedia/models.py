@@ -6,7 +6,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from BeautifulSoup import BeautifulSoup, Comment, NavigableString
-import urllib, urllib2
+from utils import url_fix
+import urllib2
 import re
 
 LANGUAGES = getattr(settings, 'WIKIPEDIA_LANGUAGES', [('en', _('English'))])
@@ -63,15 +64,14 @@ class WikipediaManager(models.Manager):
             'title': title,
             'action': 'render',
         }
-        self._params = dict([(key, unicode(val).encode('windows-1251', 'ignore')) for key, val in self._params.items()])
-
         response = urllib2.urlopen(self._get_request())
         return response.read()
 
     def _get_url(self):
         url = self._url
         if self._params:
-            url += '?' + urllib.urlencode(self._params)
+            url += '?' + '&'.join(['%s=%s' % (key, val) for key, val in self._params.items()])
+        url = url_fix(url)
         return url
 
     def _get_request(self):
@@ -104,6 +104,7 @@ class WikipediaElement(models.Model):
         class_attribute = True
         script = True
         disambiguation = True
+        thumb_images = True
 
         external_links_titles = (u'Ссылки','links')
 
@@ -186,11 +187,11 @@ class WikipediaElement(models.Model):
             div_classes += ['reflist','references-small']
             self.remove.block_titles += [(u'Примечания','References')]
 
-        if self.remove.infobox:
-            infobox = self.content.find(True, {'class': re.compile('infobox')})
-            div_classes += ['thumb']
-            if infobox:
+        infobox = self.content.find(True, {'class': re.compile('infobox')})
+        if infobox:
+            if self.remove.disambiguation:
                 [el.extract() for el in infobox.findAllPrevious(True)]
+            if self.remove.infobox:
                 infobox.extract()
 
         if self.remove.sisterproject:
@@ -206,6 +207,9 @@ class WikipediaElement(models.Model):
         if self.remove.disambiguation:
             # disambiguation div class="dablink" (en)
             div_classes += ['dablink']
+
+        if self.remove.thumb_images:
+            div_classes += ['thumb']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]

@@ -17,6 +17,15 @@ class WikipediaTestCase(TestCase):
         self.assertTrue(element2.content.find(u'художественный фильм') != -1)
         self.assertTrue(element2.content.find('<span lang="en" xml:lang="en">Easy Rider</span>') != -1)
 
+    def test_import_unicode_symbols(self):
+
+        object = Site.objects.create(domain='1', name='1')
+        element1 = WikipediaElement.objects.update(object, 'en', u'Mango_Soufflé')
+
+        self.assertEqual(WikipediaElement.objects.count(), 1)
+
+        self.assertTrue(element1.content.find(u'Mahesh Dattani') != -1)
+
     def test_removing_garbage(self):
         '''Test of importing wikipedia page'''
         object = Site.objects.create(domain='1', name='1')

@@ -188,6 +188,7 @@ class WikipediaElement(models.Model):
 
         if self.remove.infobox:
             infobox = self.content.find(True, {'class': re.compile('infobox')})
+            div_classes += ['thumb']
             if infobox:
                 [el.extract() for el in infobox.findAllPrevious(True)]
                 infobox.extract()

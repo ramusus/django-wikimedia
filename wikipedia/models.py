@@ -103,6 +103,7 @@ class WikipediaElement(models.Model):
         style_attribute = True
         class_attribute = True
         script = True
+        disambiguation = True
 
         external_links_titles = (u'Ссылки','links')
 
@@ -200,6 +201,10 @@ class WikipediaElement(models.Model):
         if self.remove.navbox:
             # links to another movies of director table class="navbox collapsible autocollapse nowraplinks"
             table_classes += ['navbox','NavFrame']
+
+        if self.remove.disambiguation:
+            # disambiguation div class="dablink" (en)
+            div_classes += ['dablink']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]

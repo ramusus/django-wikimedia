@@ -105,6 +105,7 @@ class WikipediaElement(models.Model):
         script = True
         disambiguation = True
         thumb_images = True
+        audio = True
 
         external_links_titles = (u'Ссылки','links')
 
@@ -210,6 +211,9 @@ class WikipediaElement(models.Model):
 
         if self.remove.thumb_images:
             div_classes += ['thumb']
+
+        if self.remove.audio:
+            [el.findParent('table').extract() for el in self.content.findAll('div', {'id': 'ogg_player_1'})]
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]

@@ -194,6 +194,9 @@ class WikipediaElement(models.Model):
                 [el.extract() for el in infobox.findAllPrevious(True)]
             if self.remove.infobox:
                 infobox.extract()
+                # sometimes there is another infoboxes on page http://ru.wikipedia.org/wiki/Король_говорит!
+                table_classes += ['infobox']
+                div_classes += ['infobox']
 
         if self.remove.sisterproject:
             # links to another wikimedia (en) table class="metadata mbox-small plainlinks"

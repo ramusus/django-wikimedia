@@ -89,6 +89,7 @@ class WikipediaElement(models.Model):
         table_classes = []
         div_classes = []
         block_titles = []
+        span_classes = []
 
         edit_links = True
         contents = True
@@ -156,6 +157,7 @@ class WikipediaElement(models.Model):
         '''
         table_classes = self.remove.table_classes
         div_classes = self.remove.div_classes
+        span_classes = self.remove.span_classes
 
         # span editsection
         if self.remove.edit_links:
@@ -186,7 +188,7 @@ class WikipediaElement(models.Model):
         if self.remove.reference:
             # references block (en) div class="reflist references-column-count references-column-count-2"
             div_classes += ['reflist','references-small']
-            self.remove.block_titles += [(u'Примечания','References')]
+            self.remove.block_titles += [(u'Примечания','References'),(u'Источники',)]
 
         infobox = self.content.find(True, {'class': re.compile('infobox')})
         if infobox:
@@ -207,6 +209,9 @@ class WikipediaElement(models.Model):
         if self.remove.navbox:
             # links to another movies of director table class="navbox collapsible autocollapse nowraplinks"
             table_classes += ['navbox','NavFrame']
+            # links to another cities of this region
+            table_classes += ['toccolours']
+            div_classes += ['navbox','NavFrame']
 
         if self.remove.disambiguation:
             # disambiguation div class="dablink" (en)
@@ -217,6 +222,7 @@ class WikipediaElement(models.Model):
 
         if self.remove.audio:
             [el.findParent('table').extract() for el in self.content.findAll('div', {'id': 'ogg_player_1'})]
+            span_classes += ['audiolink','audiolinkinfo']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]
@@ -224,6 +230,7 @@ class WikipediaElement(models.Model):
 
         [el.extract() for el in self.content.findAll('table', {'class': re.compile('(%s)' % '|'.join(table_classes))})]
         [el.extract() for el in self.content.findAll('div', {'class': re.compile('(%s)' % '|'.join(div_classes))})]
+        [el.extract() for el in self.content.findAll('span', {'class': re.compile('(%s)' % '|'.join(span_classes))})]
         self.remove_blocks()
 
         # remove all style attributes

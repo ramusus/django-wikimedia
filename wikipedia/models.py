@@ -178,7 +178,7 @@ class WikipediaElement(models.Model):
             self.remove.block_titles += [self.remove.external_links_titles]
 
         if self.remove.see_also:
-            self.remove.block_titles += [('See also', u'Cм[^ ]+ также')]
+            self.remove.block_titles += [('See also', u'См[^ ]+ также',)]
 
         if self.remove.reference_links:
             [el.extract() for el in self.content.findAll('sup', {'class': 'reference'})]

@@ -114,7 +114,7 @@ class WikipediaElement(models.Model):
         thumb_images = True
         audio = True
 
-        external_links_titles = (u'Ссылки','links')
+        external_links_titles = [u'Ссылки','links']
 
     lang = models.CharField(_('Language'), max_length=2, choices=LANGUAGES)
     title = models.CharField(_('Title'), max_length=300)
@@ -183,10 +183,10 @@ class WikipediaElement(models.Model):
 
         # external links block (ru,en)
         if self.remove.external_links:
-            self.remove.block_titles += [self.remove.external_links_titles]
+            self.remove.block_titles += self.remove.external_links_titles
 
         if self.remove.see_also:
-            self.remove.block_titles += [('See also', u'См[^ ]+ также',)]
+            self.remove.block_titles += ['See also', u'См[^ ]+ также']
 
         if self.remove.reference_links:
             [el.extract() for el in self.content.findAll('sup', {'class': 'reference'})]
@@ -194,7 +194,7 @@ class WikipediaElement(models.Model):
         if self.remove.reference:
             # references block (en) div class="reflist references-column-count references-column-count-2"
             div_classes += ['reflist','references-small']
-            self.remove.block_titles += [(u'Примечания','References'),(u'Источники',)]
+            self.remove.block_titles += [u'Примечания','References',u'Источники',]
 
         infobox = self.content.find(True, {'class': re.compile('infobox')})
         if infobox:
@@ -254,8 +254,7 @@ class WikipediaElement(models.Model):
         '''
         Remove h2 title and all next tags siblings until next h2 title
         '''
-        for titles in self.remove.block_titles:
-            [el.extract() for el in self.find_block_contents(titles)]
+        [el.extract() for el in self.find_block_contents(self.remove.block_titles)]
 
     def find_block_contents(self, titles):
         '''

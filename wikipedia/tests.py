@@ -67,3 +67,6 @@ class WikipediaTestCase(TestCase):
 
         ru = WikipediaElement.objects.update(object, 'ru', u'Король_говорит!')
         self.assertTrue(ru.content.find(u'ogg_player_1') == -1)
+
+        ru = WikipediaElement.objects.update(object, 'ru', u'Титаник_(фильм,_1997)')
+        self.assertTrue(ru.content.find(u'См. также') == -1)

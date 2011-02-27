@@ -20,6 +20,7 @@ class WikipediaTitleError(ValueError):
 class WikipediaManager(models.Manager):
     '''
     Wikipedia manager
+    # TODO: make attribute 'object' optional
     '''
     _headers = {
         'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; ru; rv:1.9.1.8) Gecko/20100214 Linux Mint/8 (Helena) Firefox/3.5.8',
@@ -80,6 +81,11 @@ class WikipediaManager(models.Manager):
 class WikipediaElement(models.Model):
     '''
     Wikipedia page model
+    # TODO: Refactor and rename application to Wikimedia, model to Wikipage.
+    # TODO: add model for sites with urls and foreignKey to model Wikipage
+    # TODO: move Remove class to external entity with ability to connect it for different sites
+    # TODO: save links to another wikimedia projects in parse phase
+    # TODO: make attribute 'object' optional
     '''
     class Meta:
         unique_together = ('object_id', 'content_type', 'lang', 'title')

@@ -21,10 +21,13 @@ class WikipediaTestCase(TestCase):
 
         object = Site.objects.create(domain='1', name='1')
         element1 = WikipediaElement.objects.update(object, 'en', u'Mango_Soufflé')
+        element2 = WikipediaElement.objects.update(object, 'ru', u'Герой_(фильм,_2002)')
+        element3 = WikipediaElement.objects.update(object, 'en', u'Hero_(2002_film)')
 
-        self.assertEqual(WikipediaElement.objects.count(), 1)
-
+        self.assertEqual(WikipediaElement.objects.count(), 2)
         self.assertTrue(element1.content.find(u'Mahesh Dattani') != -1)
+        self.assertTrue(element2.content.find(u'英雄') != -1)
+        self.assertTrue(element3.content.find(u'無名') != -1)
 
     def test_removing_garbage(self):
         '''Test of importing wikipedia page'''

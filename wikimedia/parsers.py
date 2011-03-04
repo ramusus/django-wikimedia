@@ -1,161 +1,149 @@
 # -*- coding: utf-8 -*-
-from django.db import models
-from django.dispatch import Signal
-from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
 from BeautifulSoup import BeautifulSoup, Comment, NavigableString
-from utils import url_fix
-import urllib2
 import re
+import urllib
 
-LANGUAGES = getattr(settings, 'WIKIPEDIA_LANGUAGES', [('en', _('English'))])
-
-wikipedia_updated = Signal(providing_args=['instance','created'])
-
-class WikipediaTitleError(ValueError):
-    pass
-
-class WikipediaManager(models.Manager):
+class WikipageGarbageRemove(object):
     '''
-    Wikipedia manager
-    # TODO: make attribute 'object' optional
+    Class for cleaning wikipage by removing unnecessary garbage
     '''
-    _headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; ru; rv:1.9.1.8) Gecko/20100214 Linux Mint/8 (Helena) Firefox/3.5.8',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ru,en-us;q=0.7,en;q=0.3',
-        'Accept-Encoding': 'deflate',
-        'Accept-Charset': 'utf-8;q=0.7,*;q=0.7',
-        'Keep-Alive': '300',
-        'Connection': 'keep-alive',
-        'Referer': 'http://wikipedia.org/',
-        'Cookie': 'users_info[check_sh_bool]=none; search_last_date=2010-02-19; search_last_month=2010-02;                                        PHPSESSID=b6df76a958983da150476d9cfa0aab18',
-    }
+    table_classes = [] # table containers with specified class
+    div_classes = [] # div containers with specified class
+    span_classes = [] # span containers with specified class
 
-    def update(self, object, lang, title):
+    style_attribute = True # attribute style from containers
+    class_attribute = True # attribute class from containers
+    script = True # scripts
+    comments = True # comments
 
-        if len(lang) != 2:
-            raise ValueError('Attribute lang must be 2 symbols length')
+    block_titles = [] # whole h2 blocks with specified title
 
-        if lang not in [l[0] for l in LANGUAGES]:
-            raise ValueError('Attribute lang not in allowed settings.WIKIPEDIA_LANGUAGES')
+    edit_links = True
+    contents = True
+    external_links = True
+    external_links_titles = [u'Ссылки','links']
+    infobox = True
+    sisterproject = True
+    navbox = True
+    reference = True
+    reference_links = True
+    see_also = True
+    disambiguation = True
+    thumb_images = True
+    audio = True
 
-        try:
-            content = self._get_content(lang, title)
-        except urllib2.HTTPError:
-            raise WikipediaTitleError('Attribute title point to incorrect wikipedia title')
-
-        element, created = self.get_or_create(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang, title=title, defaults={
-            'content': content,
-        })
-        if not created:
-            element.content = content
-            element.save()
-
-        # delete all other wikipedia elements for this object
-        self.filter(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang).exclude(id=element.id).delete()
-
-        return element
-
-    def _get_content(self, lang, title):
-        self._url = 'http://%s.wikipedia.org/w/index.php' % lang
-        self._params = {
-            'title': title,
-            'action': 'render',
-        }
-        response = urllib2.urlopen(self._get_request())
-        return response.read()
-
-    def _get_url(self):
-        url = self._url
-        if self._params:
-            url += '?' + '&'.join(['%s=%s' % (key, val) for key, val in self._params.items()])
-        url = url_fix(url)
-        return url
-
-    def _get_request(self):
-        return urllib2.Request(url=self._get_url(), headers=self._headers)
-
-class WikipediaElement(models.Model):
+class WikipageParserBase(object):
     '''
-    Wikipedia page model
-    # TODO: Refactor and rename application to Wikimedia, model to Wikipage.
-    # TODO: add model for sites with urls and foreignKey to model Wikipage
-    # TODO: move Remove class to external entity with ability to connect it for different sites
-    # TODO: save links to another wikimedia projects in parse phase
-    # TODO: make attribute 'object' optional
+    Common interface for wikipage parsers
     '''
-    class Meta:
-        unique_together = ('object_id', 'content_type', 'lang', 'title')
-        ordering = ('-updated',)
+    class Remove(WikipageGarbageRemove):
+        pass
 
-    class Remove:
-        table_classes = []
-        div_classes = []
-        block_titles = []
-        span_classes = []
-
-        edit_links = True
-        contents = True
-        comments = True
-        external_links = True
-        infobox = True
-        sisterproject = True
-        navbox = True
-        reference = True
-        reference_links = True
-        see_also = True
-        style_attribute = True
-        class_attribute = True
-        script = True
-        disambiguation = True
-        thumb_images = True
-        audio = True
-
-        external_links_titles = [u'Ссылки','links']
-
-    lang = models.CharField(_('Language'), max_length=2, choices=LANGUAGES)
-    title = models.CharField(_('Title'), max_length=300)
-    content = models.TextField(_('Content'))
-    updated = models.DateTimeField(_('Date and time of last updating'), editable=False, auto_now=True)
-
-    objects = WikipediaManager()
-
-    object_id = models.PositiveIntegerField()
-    content_type = models.ForeignKey(ContentType)
-    content_object = generic.GenericForeignKey()
-
-    def save(self, *args, **kwargs):
-        '''
-        Prepare wikipedia content, send signal after saving
-        '''
-        id = self.id
-        self.process_content()
-        super(WikipediaElement, self).save(*args, **kwargs)
-        wikipedia_updated.send(sender=WikipediaElement, instance=self, created=bool(id))
+    content = None
+    wikipage = None
 
     @property
     def remove(self):
         return self.Remove
 
-    def process_content(self):
+    def process_content(self, content, wikipage):
         '''
         Process wikipedia content before saving to DB
         '''
-        self.content = BeautifulSoup(self.content)
+        self.content = content
+        self.wikipage = wikipage
 
         self.parse_content()
         self.remove_garbage()
 
-        self.content = unicode(self.content).strip()
+        return self.content
 
     def parse_content(self):
         '''
         Parse wikipedia content page for useful information
         '''
         pass
+
+    def remove_garbage(self):
+        '''
+        Remove unnecessary tags from wikipedia content page
+        '''
+        pass
+
+class WikipageParserBeautifulsoup(WikipageParserBase):
+    '''
+    Wikipage parser based on BeautifulSoup library
+    '''
+    def process_content(self, content, wikipage):
+        '''
+        Process wikipedia content before saving to DB
+        '''
+        content = BeautifulSoup(content)
+        content = super(WikipageParserBeautifulsoup, self).process_content(content, wikipage)
+        content = unicode(content).strip()
+        return content
+
+    def parse_content(self):
+        '''
+        Parse wikipedia content for links to sister projects
+        '''
+        self.parse_sister_projects()
+
+    def parse_sister_projects(self):
+        '''
+        Parse wikipedia content for links to sister projects
+        '''
+        self.wikipage.sister_projects = [] # important to make urls list empty
+        project_urls = []
+        projects = []
+
+        registered_projects = self.wikipage.project.__class__.objects.all()
+
+        for item in self.find_block_contents(self.remove.external_links_titles, remove_strings=True):
+
+            # <table class="metadata plainlinks mbox-small"
+            # <table class="metadata mbox-small plainlinks"
+            # <table class="metadata plainlinks navigation-box"
+            # <div class="infobox sisterproject noprint wikiquote-box"
+            item_classes_set = set(item.get('class', '').split())
+            if item.name == 'table' and set('metadata plainlinks'.split()).issubset(item_classes_set) or \
+                item.name == 'div' and set('infobox sisterproject'.split()).issubset(item_classes_set):
+
+                    if self.wikipage.lang == 'ru':
+                        for link in item.findAll('span', {'class': re.compile('wikiquote-ref|wikicommons-ref')}):
+                            project_urls += [link.find('a')['href']]
+
+                    elif self.wikipage.lang == 'en':
+                        # http://en.wikiquote.org/wiki/Special:Search/The_Big_Lebowski
+                        for link in item.findAll('a', {'href': re.compile('^http://.+\.org/wiki/'), 'class': 'extiw'}):
+                            project_urls += [link['href']]
+
+        # generate from found urls list with tuples (code, title)
+        for url in project_urls:
+            for domain, title in re.compile(r'^http://([^/]+)/wiki/(?:Special:Search/)?([^/\?]+)(?:\?.+)?$').findall(url):
+                for project in registered_projects:
+                    if domain == project.get_domain(self.wikipage.lang):
+                        title = urllib.unquote(title.encode('utf-8')).decode('utf-8')
+                        projects += [(project.code, title)]
+
+        self.wikipage.sister_projects = projects
+
+    def parse_wikicommons_images(self):
+        '''
+        Parse and return images from wikicommons wikimedia's project
+        '''
+        images = []
+        for item in self.content.findAll('li', {'class': 'gallerybox'}):
+            # http://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Einst_4.jpg/83px-Einst_4.jpg
+            # http://upload.wikimedia.org/wikipedia/commons/4/45/Einst_4.jpg
+            image_url = re.sub(r'^(.+)thumb/(.+)/[^/]+', r'\1\2', item.find('img')['src'])
+            try:
+                image_text = unicode(item.find('div', {'class': 'gallerytext'}).find('p').contents[0])
+            except:
+                image_text = ''
+            images += [(image_url, image_text)]
+
+        return images
 
     def remove_garbage(self):
         '''
@@ -227,7 +215,7 @@ class WikipediaElement(models.Model):
             div_classes += ['thumb']
 
         if self.remove.audio:
-            [el.findParent('table').extract() for el in self.content.findAll('div', {'id': 'ogg_player_1'})]
+            set_parents = [el.findParents()[-2].extract() for el in self.content.findAll('div', {'id': 'ogg_player_1'})]
             span_classes += ['audiolink','audiolinkinfo']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
@@ -256,7 +244,7 @@ class WikipediaElement(models.Model):
         '''
         [el.extract() for el in self.find_block_contents(self.remove.block_titles)]
 
-    def find_block_contents(self, titles):
+    def find_block_contents(self, titles, remove_strings=False):
         '''
         Find and return all block items with h2 title and all next tags siblings until next h2 title
         '''
@@ -267,8 +255,15 @@ class WikipediaElement(models.Model):
             if not title:
                 continue
             next = title.nextSibling
-            items += [title]
+
+            if not isinstance(title, NavigableString) or not remove_strings:
+                items += [title]
+
             while next and (isinstance(next, NavigableString) or next.name != 'h2'):
-                items += [next]
+
+                if not isinstance(next, NavigableString) or not remove_strings:
+                    items += [next]
+
                 next = next.nextSibling
+
         return items

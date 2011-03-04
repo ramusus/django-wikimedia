@@ -1,0 +1,50 @@
+- model: wikimedia.wikiproject
+  pk: wikipedia
+  fields:
+    domain: wikipedia.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikiquote
+  fields:
+    domain: wikiquote.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wiktionary
+  fields:
+    domain: wiktionary.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikisource
+  fields:
+    domain: wikisource.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikinews
+  fields:
+    domain: wikinews.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikiversity
+  fields:
+    domain: wikiversity.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikibooks
+  fields:
+    domain: wikibooks.org
+    subdomain_lang: True
+- model: wikimedia.wikiproject
+  pk: wikimeta
+  fields:
+    domain: meta.wikimedia.org
+    subdomain_lang: False
+- model: wikimedia.wikiproject
+  pk: wikicommons
+  fields:
+    domain: commons.wikimedia.org
+    subdomain_lang: False
+- model: wikimedia.wikiproject
+  pk: wikispecies
+  fields:
+    domain: species.wikimedia.org
+    subdomain_lang: False

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from django.db import models
-from django.dispatch import Signal
 from django.conf import settings
 from django.utils.translation import get_language, ugettext_lazy as _
 from django.utils.importlib import import_module
@@ -11,9 +10,19 @@ from utils import url_fix
 import urllib2
 
 LANGUAGES = getattr(settings, 'WIKIMEDIA_LANGUAGES', [('en', _('English'))])
-PARSER = getattr(settings, 'WIKIMEDIA_PARSER', 'wikimedia.parsers.WikipageParserBeautifulsoup')
 
-wikipage_updated = Signal(providing_args=['instance','created'])
+def get_parser():
+    from django.conf import settings
+    try:
+        parser = getattr(settings, 'WIKIMEDIA_PARSER', 'wikimedia.parsers.WikipageParserBeautifulsoup')
+        parser_path = parser.split('.')
+        parser_module = import_module('.'.join(parser_path[:-1]))
+        WikipageParser = getattr(parser_module, parser_path[-1])
+    except ImportError, e:
+        raise ImproperlyConfigured('Error importing wikipage parsing module %s: "%s"' % (parser, e))
+
+    return WikipageParser()
+
 
 class WikipageTitleError(ValueError):
     pass
@@ -60,6 +69,7 @@ class WikipageManager(models.Manager):
         project = self.get_project(project_code)
 
         if object:
+            filter_delete_dict = dict(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
             page = self.get_or_create(project=project, lang=lang, title=title,
                 object_id=object.id, content_type=ContentType.objects.get_for_model(object))[0]
         else:
@@ -69,10 +79,12 @@ class WikipageManager(models.Manager):
             page.set_content()
             page.save()
 
-            filter_delete_dict = dict(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
-
             # update all found sister projects
             if with_sister_projects:
+
+                # delete all others wikimedia pages for this object (every projects)
+                if object:
+                    self.filter(**filter_delete_dict).exclude(id=page.id).delete()
 
                 for project_code, title in page.sister_projects:
                     try:
@@ -80,13 +92,9 @@ class WikipageManager(models.Manager):
                     except WikipageTitleError:
                         continue
 
-            else:
+            elif object:
                 # if updating without sister projects => removing only existed pages of current project
-                filter_delete_dict.update(project=project)
-
-            # delete wikimedia pages for this object
-            if object:
-                self.filter(**filter_delete_dict).exclude(id=page.id).delete()
+                self.filter(project=project, **filter_delete_dict).exclude(id=page.id).delete()
 
             return page
 
@@ -150,18 +158,17 @@ class Wikipage(models.Model):
 
     sister_projects = []
 
-    def __init__(self, *args, **kwargs):
-        self.parser = get_parser()
-        super(Wikipage, self).__init__(*args, **kwargs)
-
     def save(self, *args, **kwargs):
         '''
-        Prepare wikipedia content, send signal after saving
+        Process wikipedia content before saving
         '''
         id = self.id
-        self.content = self.parser.process_content(self.content, self)
+
+        if self.content:
+            parser = get_parser()
+            self.content = parser.process_content(self.content, self)
+
         super(Wikipage, self).save(*args, **kwargs)
-        wikipage_updated.send(sender=Wikipage, instance=self, created=bool(id))
 
     def set_content(self):
         '''
@@ -203,13 +210,3 @@ class Wikipage(models.Model):
         }
 
         return urllib2.Request(url=self.get_url(), headers=headers)
-
-def get_parser():
-    try:
-        parser_path = PARSER.split('.')
-        parser_module = import_module('.'.join(parser_path[:-1]))
-        WikipageParser = getattr(parser_module, parser_path[-1])
-    except ImportError, e:
-        raise ImproperlyConfigured('Error importing wikipage parsing module %s: "%s"' % (PARSER, e))
-
-    return WikipageParser()

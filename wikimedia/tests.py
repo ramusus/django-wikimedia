@@ -4,6 +4,7 @@ from django.conf import settings
 from models import Wikipage
 
 setattr(settings, 'WIKIMEDIA_LANGUAGES', [('en', ''),('ru', '')])
+delattr(settings, 'WIKIMEDIA_PARSER')
 
 class WikimediaTestCase(TestCase):
 

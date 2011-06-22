@@ -215,7 +215,7 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
             div_classes += ['thumb']
 
         if self.remove.audio:
-            set_parents = [el.findParents()[-2].extract() for el in self.content.findAll('div', {'id': 'ogg_player_1'})]
+            set_parents = [el.findParents()[-2].extract() for el in self.content.findAll('div', {'id': re.compile('^ogg_player_')})]
             span_classes += ['audiolink','audiolinkinfo']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">

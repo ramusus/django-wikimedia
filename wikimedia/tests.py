@@ -136,5 +136,10 @@ class WikimediaTestCase(TestCase):
         self.assertTrue(ru.content.find(u'ogg_player_1') == -1)
         self.assertTrue(ru.content.find(u'По словам режиссёра Гая Ричи') != -1)
 
+        ru = Wikipage.objects.update(u'София_Ротару', 'ru')
+        self.assertTrue(ru.content.find(u'ogg_player_1') == -1)
+        self.assertTrue(ru.content.find(u'ogg_player_2') == -1)
+        self.assertTrue(ru.content.find(u'ogg_player_3') == -1)
+
         ru = Wikipage.objects.update(u'Титаник_(фильм,_1997)', 'ru')
         self.assertTrue(ru.content.find(u'См. также') == -1)

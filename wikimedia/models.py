@@ -153,7 +153,7 @@ class Wikipage(models.Model):
     objects = WikipageManager()
 
     object_id = models.PositiveIntegerField(null=True)
-    content_type = models.ForeignKey(ContentType, null=True)
+    content_type = models.ForeignKey(ContentType, null=True, related_name='wikipages')
     content_object = generic.GenericForeignKey()
 
     sister_projects = []

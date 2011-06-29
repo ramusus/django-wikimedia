@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 METADATA = dict(
-    name='django-wikipedia',
+    name='django-wikimedia',
     version='0.2',
     author='ramusus',
-    description='Application for syncing project with wikipedia API',
+    description='Application for syncing project with wikimedia API',
     long_description=open('README').read(),
-    url='http://github.com/ramusus/django-wikipedia',
+    url='http://github.com/ramusus/django-wikimedia',
 )
 
 if __name__ == '__main__':

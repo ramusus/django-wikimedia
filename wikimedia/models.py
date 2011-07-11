@@ -79,7 +79,7 @@ class WikipageManager(models.Manager):
                 page = self.get_or_create(project=project, lang=lang, title=title)[0]
 
         except urllib2.HTTPError:
-            raise WikipageTitleError('Incorrect wikipedia title (%s)' % (page.get_url()))
+            raise WikipageTitleError('Incorrect %s title (%s) with lang "%s"' % (project_code, title, lang))
 
         # update all found sister projects
         if with_sister_projects:

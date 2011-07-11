@@ -9,6 +9,8 @@ from django.core.exceptions import ImproperlyConfigured
 from utils import url_fix
 import urllib2
 
+__all__ = ['WikipageTitleError', 'WikipageManager', 'Wikipage', 'Wikiproject']
+
 LANGUAGES = getattr(settings, 'WIKIMEDIA_LANGUAGES', [('en', _('English'))])
 
 def get_parser():
@@ -76,7 +78,6 @@ class WikipageManager(models.Manager):
             page = self.get_or_create(project=project, lang=lang, title=title)[0]
 
         try:
-            page.set_content()
             page.save()
 
             # update all found sister projects
@@ -134,6 +135,9 @@ class Wikiproject(models.Model):
     def get_domain(self, lang):
         return '%s.%s' % (lang, self.domain) if self.subdomain_lang else self.domain
 
+    def __unicode__(self):
+        return '<Wikiproject: %s>' % self.code
+
 class Wikipage(models.Model):
     '''
     Wikipedia page model
@@ -163,6 +167,7 @@ class Wikipage(models.Model):
         Process wikipedia content before saving
         '''
         id = self.id
+        self.set_content()
 
         if self.content:
             parser = get_parser()

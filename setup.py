@@ -2,7 +2,7 @@
 
 METADATA = dict(
     name='django-wikimedia',
-    version='0.2',
+    version=__import__('wikimedia').__version__,
     author='ramusus',
     description='Application for syncing project with wikimedia API',
     long_description=open('README').read(),

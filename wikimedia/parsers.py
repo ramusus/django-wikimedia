@@ -115,12 +115,12 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
 
                     elif self.wikipage.lang == 'en':
                         # http://en.wikiquote.org/wiki/Special:Search/The_Big_Lebowski
-                        for link in item.findAll('a', {'href': re.compile('^http://.+\.org/wiki/'), 'class': 'extiw'}):
+                        for link in item.findAll('a', {'href': re.compile('^(?:http:)?//.+\.org/wiki/'), 'class': re.compile('^(extiw|external text)$')}):
                             project_urls += [link['href']]
 
         # generate from found urls list with tuples (code, title)
         for url in project_urls:
-            for domain, title in re.compile(r'^http://([^/]+)/wiki/(?:Special:Search/)?([^/\?]+)(?:\?.+)?$').findall(url):
+            for domain, title in re.compile(r'^(?:http:)?//([^/]+)/wiki/(?:Special:Search/)?([^/\?]+)(?:\?.+)?$').findall(url):
                 for project in registered_projects:
                     if domain == project.get_domain(self.wikipage.lang):
                         title = urllib.unquote(title.encode('utf-8')).decode('utf-8')
@@ -135,8 +135,10 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
         images = []
         for item in self.content.findAll('li', {'class': 'gallerybox'}):
             # http://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Einst_4.jpg/83px-Einst_4.jpg
-            # http://upload.wikimedia.org/wikipedia/commons/4/45/Einst_4.jpg
+            # //upload.wikimedia.org/wikipedia/commons/4/45/Einst_4.jpg
             image_url = re.sub(r'^(.+)thumb/(.+)/[^/]+', r'\1\2', item.find('img')['src'])
+            if image_url[0:2] == '//':
+                image_url = 'http:' + image_url
             try:
                 image_text = unicode(item.find('div', {'class': 'gallerytext'}).find('p').contents[0])
             except:

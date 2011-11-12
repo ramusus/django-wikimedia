@@ -9,6 +9,8 @@ from django.core.exceptions import ImproperlyConfigured
 from utils import url_fix
 import urllib2
 
+__all__ = ['WikipageTitleError', 'WikipageManager', 'Wikipage', 'Wikiproject']
+
 LANGUAGES = getattr(settings, 'WIKIMEDIA_LANGUAGES', [('en', _('English'))])
 
 def get_parser():
@@ -68,39 +70,35 @@ class WikipageManager(models.Manager):
         lang = self.get_language(lang)
         project = self.get_project(project_code)
 
-        if object:
-            filter_delete_dict = dict(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
-            page = self.get_or_create(project=project, lang=lang, title=title,
-                object_id=object.id, content_type=ContentType.objects.get_for_model(object))[0]
-        else:
-            page = self.get_or_create(project=project, lang=lang, title=title)[0]
-
         try:
-            page.set_content()
-            page.save()
-
-            # update all found sister projects
-            if with_sister_projects:
-
-                # delete all others wikimedia pages for this object (every projects)
-                if object:
-                    self.filter(**filter_delete_dict).exclude(id=page.id).delete()
-
-                for project_code, title in page.sister_projects:
-                    try:
-                        self.update(title, lang, project_code, object)
-                    except WikipageTitleError:
-                        continue
-
-            elif object:
-                # if updating without sister projects => removing only existed pages of current project
-                self.filter(project=project, **filter_delete_dict).exclude(id=page.id).delete()
-
-            return page
+            if object:
+                filter_delete_dict = dict(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
+                page = self.get_or_create(project=project, lang=lang, title=title,
+                    object_id=object.id, content_type=ContentType.objects.get_for_model(object))[0]
+            else:
+                page = self.get_or_create(project=project, lang=lang, title=title)[0]
 
         except urllib2.HTTPError:
-            page.delete()
-            raise WikipageTitleError('Incorrect wikipedia title (%s)' % (page.get_url()))
+            raise WikipageTitleError('Incorrect %s title (%s) with lang "%s"' % (project_code, title.encode('utf-8'), lang))
+
+        # update all found sister projects
+        if with_sister_projects:
+
+            # delete all others wikimedia pages for this object (every projects)
+            if object:
+                self.filter(**filter_delete_dict).exclude(id=page.id).delete()
+
+            for project_code, title in page.sister_projects:
+                try:
+                    self.update(title, lang, project_code, object)
+                except WikipageTitleError:
+                    continue
+
+        elif object:
+            # if updating without sister projects => removing only existed pages of current project
+            self.filter(project=project, **filter_delete_dict).exclude(id=page.id).delete()
+
+        return page
 
     def get_language(self, lang):
         '''
@@ -134,6 +132,9 @@ class Wikiproject(models.Model):
     def get_domain(self, lang):
         return '%s.%s' % (lang, self.domain) if self.subdomain_lang else self.domain
 
+    def __unicode__(self):
+        return '<Wikiproject: %s>' % self.code
+
 class Wikipage(models.Model):
     '''
     Wikipedia page model
@@ -163,6 +164,7 @@ class Wikipage(models.Model):
         Process wikipedia content before saving
         '''
         id = self.id
+        self.set_content()
 
         if self.content:
             parser = get_parser()
@@ -175,6 +177,7 @@ class Wikipage(models.Model):
         Get page content for current project and defina self.content model attribute
         '''
         request = self._get_request()
+
         response = urllib2.urlopen(request)
         self.content = response.read()
 

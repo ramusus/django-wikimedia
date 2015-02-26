@@ -13,6 +13,7 @@ __all__ = ['WikipageTitleError', 'WikipageManager', 'Wikipage', 'Wikiproject']
 
 LANGUAGES = getattr(settings, 'WIKIMEDIA_LANGUAGES', [('en', _('English'))])
 
+
 def get_parser():
     from django.conf import settings
     try:
@@ -29,10 +30,13 @@ def get_parser():
 class WikipageTitleError(ValueError):
     pass
 
+
 class WikipageManager(models.Manager):
+
     '''
     Wikipage manager
     '''
+
     def __getattr__(self, name):
         '''
         Method allow return wikimedia content in the following format:
@@ -72,14 +76,16 @@ class WikipageManager(models.Manager):
 
         try:
             if object:
-                filter_delete_dict = dict(object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
+                filter_delete_dict = dict(
+                    object_id=object.id, content_type=ContentType.objects.get_for_model(object), lang=lang)
                 page = self.get_or_create(project=project, lang=lang, title=title,
-                    object_id=object.id, content_type=ContentType.objects.get_for_model(object))[0]
+                                          object_id=object.id, content_type=ContentType.objects.get_for_model(object))[0]
             else:
                 page = self.get_or_create(project=project, lang=lang, title=title)[0]
 
         except urllib2.HTTPError:
-            raise WikipageTitleError('Incorrect %s title (%s) with lang "%s"' % (project_code, title.encode('utf-8'), lang))
+            raise WikipageTitleError('Incorrect %s title (%s) with lang "%s"' %
+                                     (project_code, title.encode('utf-8'), lang))
 
         # update all found sister projects
         if with_sister_projects:
@@ -121,13 +127,15 @@ class WikipageManager(models.Manager):
         except:
             raise ValueError('There is no wikiproject for updating with code "%s"' % project_code)
 
+
 class Wikiproject(models.Model):
+
     '''
     Wikiproject model for wikimedia sisters projects or other sites based on wikimedia engines
     '''
     code = models.CharField(_('Name'), max_length=20, primary_key=True)
     domain = models.CharField(_('Domain'), max_length=50)
-    subdomain_lang = models.BooleanField(_('Language subdomain'))
+    subdomain_lang = models.BooleanField(_('Language subdomain'), default=False)
 
     def get_domain(self, lang):
         return '%s.%s' % (lang, self.domain) if self.subdomain_lang else self.domain
@@ -135,7 +143,9 @@ class Wikiproject(models.Model):
     def __unicode__(self):
         return '<Wikiproject: %s>' % self.code
 
+
 class Wikipage(models.Model):
+
     '''
     Wikipedia page model
     # TODO: move Remove class to external entity with ability to connect it for different sites

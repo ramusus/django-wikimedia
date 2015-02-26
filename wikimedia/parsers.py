@@ -3,25 +3,27 @@ from BeautifulSoup import BeautifulSoup, Comment, NavigableString
 import re
 import urllib
 
+
 class WikipageGarbageRemove(object):
+
     '''
     Class for cleaning wikipage by removing unnecessary garbage
     '''
-    table_classes = [] # table containers with specified class
-    div_classes = [] # div containers with specified class
-    span_classes = [] # span containers with specified class
+    table_classes = []  # table containers with specified class
+    div_classes = []  # div containers with specified class
+    span_classes = []  # span containers with specified class
 
-    style_attribute = True # attribute style from containers
-    class_attribute = True # attribute class from containers
-    script = True # scripts
-    comments = True # comments
+    style_attribute = True  # attribute style from containers
+    class_attribute = True  # attribute class from containers
+    script = True  # scripts
+    comments = True  # comments
 
-    block_titles = [] # whole h2 blocks with specified title
+    block_titles = []  # whole h2 blocks with specified title
 
     edit_links = True
     contents = True
     external_links = True
-    external_links_titles = [u'Ссылки','links']
+    external_links_titles = [u'Ссылки', 'links']
     infobox = True
     sisterproject = True
     navbox = True
@@ -32,7 +34,9 @@ class WikipageGarbageRemove(object):
     thumb_images = True
     audio = True
 
+
 class WikipageParserBase(object):
+
     '''
     Common interface for wikipage parsers
     '''
@@ -70,10 +74,13 @@ class WikipageParserBase(object):
         '''
         pass
 
+
 class WikipageParserBeautifulsoup(WikipageParserBase):
+
     '''
     Wikipage parser based on BeautifulSoup library
     '''
+
     def process_content(self, content, wikipage):
         '''
         Process wikipedia content before saving to DB
@@ -93,7 +100,7 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
         '''
         Parse wikipedia content for links to sister projects
         '''
-        self.wikipage.sister_projects = [] # important to make urls list empty
+        self.wikipage.sister_projects = []  # important to make urls list empty
         project_urls = []
         projects = []
 
@@ -106,17 +113,17 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
             # <table class="metadata plainlinks navigation-box"
             # <div class="infobox sisterproject noprint wikiquote-box"
             item_classes_set = set(item.get('class', '').split())
-            if item.name == 'table' and set('metadata plainlinks'.split()).issubset(item_classes_set) or \
-                item.name == 'div' and set('infobox sisterproject'.split()).issubset(item_classes_set):
+            if item.name == 'table' and set(['plainlinks']).issubset(item_classes_set) \
+                    or item.name == 'div' and set(['infobox', 'sisterproject']).issubset(item_classes_set):
 
-                    if self.wikipage.lang == 'ru':
-                        for link in item.findAll('span', {'class': re.compile('wikiquote-ref|wikicommons-ref')}):
-                            project_urls += [link.find('a')['href']]
+                if self.wikipage.lang == 'ru':
+                    for link in item.findAll('span', {'class': re.compile('wikiquote-ref|wikicommons-ref')}):
+                        project_urls += [link.find('a')['href']]
 
-                    elif self.wikipage.lang == 'en':
-                        # http://en.wikiquote.org/wiki/Special:Search/The_Big_Lebowski
-                        for link in item.findAll('a', {'href': re.compile('^(?:http:)?//.+\.org/wiki/'), 'class': re.compile('^(extiw|external text)$')}):
-                            project_urls += [link['href']]
+                elif self.wikipage.lang == 'en':
+                    # http://en.wikiquote.org/wiki/Special:Search/The_Big_Lebowski
+                    for link in item.findAll('a', {'href': re.compile('^(?:http:)?//.+\.org/wiki/'), 'class': re.compile('^(extiw|external text)$')}):
+                        project_urls += [link['href']]
 
         # generate from found urls list with tuples (code, title)
         for url in project_urls:
@@ -137,7 +144,7 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
             # http://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Einst_4.jpg/83px-Einst_4.jpg
             # //upload.wikimedia.org/wikipedia/commons/4/45/Einst_4.jpg
             image_url = re.sub(r'^(.+)thumb/(.+)/[^/]+', r'\1\2', item.find('img')['src'])
-            if image_url[0:2] == '//':
+            if image_url[0: 2] == '//':
                 image_url = 'http:' + image_url
             try:
                 image_text = unicode(item.find('div', {'class': 'gallerytext'}).find('p').contents[0])
@@ -169,7 +176,7 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
 
         # remove all comments
         if self.remove.comments:
-            [el.extract() for el in self.content.findAll(text=lambda text:isinstance(text, Comment))]
+            [el.extract() for el in self.content.findAll(text=lambda text: isinstance(text, Comment))]
 
         # external links block (ru,en)
         if self.remove.external_links:
@@ -183,8 +190,8 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
 
         if self.remove.reference:
             # references block (en) div class="reflist references-column-count references-column-count-2"
-            div_classes += ['reflist','references-small']
-            self.remove.block_titles += [u'Примечания','References',u'Источники',]
+            div_classes += ['reflist', 'references-small']
+            self.remove.block_titles += [u'Примечания', 'References', u'Источники', ]
 
         infobox = self.content.find(True, {'class': re.compile('infobox')})
         if infobox:
@@ -200,14 +207,14 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
             # links to another wikimedia (en) table class="metadata mbox-small plainlinks"
             table_classes += ['metadata']
             # links to another wikimedia (ru) div class="infobox sisterproject noprint wikiquote-box"
-            div_classes += ['sisterproject','wikiquote-box']
+            div_classes += ['sisterproject', 'wikiquote-box']
 
         if self.remove.navbox:
             # links to another movies of director table class="navbox collapsible autocollapse nowraplinks"
-            table_classes += ['navbox','NavFrame']
+            table_classes += ['navbox', 'NavFrame']
             # links to another cities of this region
             table_classes += ['toccolours']
-            div_classes += ['navbox','NavFrame']
+            div_classes += ['navbox', 'NavFrame']
 
         if self.remove.disambiguation:
             # disambiguation div class="dablink" (en)
@@ -217,8 +224,9 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
             div_classes += ['thumb']
 
         if self.remove.audio:
-            set_parents = [el.findParents()[-2].extract() for el in self.content.findAll('div', {'id': re.compile('^ogg_player_')})]
-            span_classes += ['audiolink','audiolinkinfo']
+            set_parents = [el.findParents()[-2].extract()
+                           for el in self.content.findAll('div', {'id': re.compile('^ogg_player_')})]
+            span_classes += ['audiolink', 'audiolinkinfo']
 
         # lock icon (en) <div class="metadata topicon" id="protected-icon">
         [el.extract() for el in self.content.findAll('div', {'id': 'protected-icon'})]

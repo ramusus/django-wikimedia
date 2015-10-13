@@ -141,9 +141,12 @@ class WikipageParserBeautifulsoup(WikipageParserBase):
         '''
         images = []
         for item in self.content.findAll('li', {'class': 'gallerybox'}):
+            img = item.find('img')
+            if not img:
+                continue
             # http://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Einst_4.jpg/83px-Einst_4.jpg
             # //upload.wikimedia.org/wikipedia/commons/4/45/Einst_4.jpg
-            image_url = re.sub(r'^(.+)thumb/(.+)/[^/]+', r'\1\2', item.find('img')['src'])
+            image_url = re.sub(r'^(.+)thumb/(.+)/[^/]+', r'\1\2', img['src'])
             if image_url[0: 2] == '//':
                 image_url = 'http:' + image_url
             try:

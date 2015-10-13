@@ -150,24 +150,24 @@ class Wikipage(models.Model):
     Wikipedia page model
     # TODO: move Remove class to external entity with ability to connect it for different sites
     '''
-    class Meta:
-        unique_together = ('object_id', 'content_type', 'lang', 'project', 'title')
-        ordering = ('-updated',)
-        get_latest_by = 'updated'
-
-    lang = models.CharField(_('Language'), max_length=2, choices=LANGUAGES)
+    lang = models.CharField(_('Language'), max_length=2, choices=LANGUAGES, db_index=True)
     project = models.ForeignKey(Wikiproject)
-    title = models.CharField(_('Title'), max_length=300)
+    title = models.CharField(_('Title'), max_length=300, db_index=True)
     content = models.TextField(_('Content'))
-    updated = models.DateTimeField(_('Date and time of last updating'), editable=False, auto_now=True)
-
-    objects = WikipageManager()
+    updated = models.DateTimeField(_('Date and time of last updating'), editable=False, auto_now=True, db_index=True)
 
     object_id = models.PositiveIntegerField(null=True)
     content_type = models.ForeignKey(ContentType, null=True, related_name='wikipages')
     content_object = generic.GenericForeignKey()
 
     sister_projects = []
+
+    objects = WikipageManager()
+
+    class Meta:
+        unique_together = ('lang', 'project', 'title')
+        ordering = ('-updated',)
+        get_latest_by = 'updated'
 
     def save(self, *args, **kwargs):
         '''

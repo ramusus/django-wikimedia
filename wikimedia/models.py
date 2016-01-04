@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
+from importlib import import_module
+
 from django.db import models
 from django.conf import settings
 from django.utils.translation import get_language, ugettext_lazy as _
-from django.utils.importlib import import_module
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
 from django.core.exceptions import ImproperlyConfigured
 from utils import url_fix
 import urllib2
+
+try:
+    # Django 1.9
+    from django.contrib.contenttypes.fields import GenericForeignKey
+except ImportError:
+    from django.contrib.contenttypes.generic import GenericForeignKey
+
 
 __all__ = ['WikipageTitleError', 'WikipageManager', 'Wikipage', 'Wikiproject']
 
@@ -158,7 +165,7 @@ class Wikipage(models.Model):
 
     object_id = models.PositiveIntegerField(null=True)
     content_type = models.ForeignKey(ContentType, null=True, related_name='wikipages')
-    content_object = generic.GenericForeignKey()
+    content_object = GenericForeignKey()
 
     sister_projects = []
 
